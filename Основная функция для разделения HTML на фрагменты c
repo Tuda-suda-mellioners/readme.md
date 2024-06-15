@@ -1,0 +1,139 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+#define MAX_TAG_NAME 20
+#define MAX_FRAGMENTS 100
+
+typedef struct {
+    char *fragments[MAX_FRAGMENTS];
+    int count;
+} FragmentList;
+
+bool is_tag(const char *str, int *tag_length) {
+    if (str[0] == '<') {
+        for (*tag_length = 1; str[*tag_length] != '\0'; (*tag_length)++) {
+            if (str[*tag_length] == '>') {
+                (*tag_length)++;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+char *get_tag_name(const char *tag) {
+    char *name = (char *)malloc(MAX_TAG_NAME);
+    int i = 0, j = 0;
+    while (tag[i] != '\0' && tag[i] != ' ' && tag[i] != '>') {
+        if (tag[i] != '<' && tag[i] != '/') {
+            name[j++] = tag[i];
+        }
+        i++;
+    }
+    name[j] = '\0';
+    return name;
+}
+
+void split_html(const char *html, int max_len, FragmentList *result) {
+    int len = strlen(html);
+    int start = 0;
+    int end = 0;
+    int current_length = 0;
+    int tag_length;
+    bool inside_tag = false;
+    char *fragment;
+    char *tag_stack[MAX_FRAGMENTS];
+    int tag_stack_top = -1;
+
+    result->count = 0;
+
+    while (end < len) {
+        if (is_tag(html + end, &tag_length)) {
+            if (html[end + 1] != '/') {
+                tag_stack[++tag_stack_top] = get_tag_name(html + end);
+            } else {
+                if (tag_stack_top >= 0) {
+                    free(tag_stack[tag_stack_top--]);
+                }
+            }
+
+            if (current_length + tag_length > max_len) {
+                fragment = (char *)malloc(current_length + 1);
+                strncpy(fragment, html + start, end - start);
+                fragment[end - start] = '\0';
+                result->fragments[result->count++] = fragment;
+
+                start = end;
+                current_length = 0;
+            }
+            end += tag_length;
+            current_length += tag_length;
+        } else {
+            if (current_length + 1 > max_len) {
+                fragment = (char *)malloc(current_length + 1);
+                strncpy(fragment, html + start, end - start);
+                fragment[end - start] = '\0';
+                result->fragments[result->count++] = fragment;
+
+                start = end;
+                current_length = 0;
+            }
+            end++;
+            current_length++;
+        }
+    }
+
+    if (current_length > 0) {
+        fragment = (char *)malloc(current_length + 1);
+        strncpy(fragment, html + start, end - start);
+        fragment[end - start] = '\0';
+        result->fragments[result->count++] = fragment;
+    }
+}
+
+void free_fragments(FragmentList *fragments) {
+    for (int i = 0; i < fragments->count; i++) {
+        free(fragments->fragments[i]);
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s --max-len=<max_len> <html_file>\n", argv[0]);
+        return 1;
+    }
+
+    int max_len = atoi(argv[1] + 10);
+    const char *file_path = argv[2];
+
+    FILE *file = fopen(file_path, "r");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char *html = (char *)malloc(file_size + 1);
+    fread(html, 1, file_size, file);
+    html[file_size] = '\0';
+    fclose(file);
+
+    FragmentList fragments;
+    split_html(html, max_len, &fragments);
+
+    for (int i = 0; i < fragments.count; i++) {
+        printf("fragment #%d: %ld chars.\n", i + 1, strlen(fragments.fragments[i]));
+        printf("%s\n", fragments.fragments[i]);
+        printf("-------------------------------------------------------------------------------\n");
+    }
+
+    free_fragments(&fragments);
+    free(html);
+
+    return 0;
+}
