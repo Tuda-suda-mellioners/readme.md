@@ -1,0 +1,9 @@
+html_splitter/
+├── CMakeLists.txt
+├── README.md
+├── msg_split.c
+├── msg_split.h
+├── split_msg.c
+└── tests/
+    ├── CMakeLists.txt
+    └── test_msg_split.c
