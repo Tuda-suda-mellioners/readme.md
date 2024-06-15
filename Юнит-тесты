@@ -1,0 +1,29 @@
+#include <CUnit/Basic.h>
+#include <CUnit/CUnit.h>
+#include "msg_split.h"
+
+void test_split_html() {
+    const char *html = "<p><strong>Test message</strong> with some <a href=\"#\">link</a> and other text.</p>";
+    int max_len = 30;
+    FragmentList fragments;
+    split_html(html, max_len, &fragments);
+    
+    CU_ASSERT_EQUAL(fragments.count, 2);
+    CU_ASSERT_STRING_ENDS_WITH(fragments.fragments[0], "</strong>");
+    CU_ASSERT_STRING_STARTS_WITH(fragments.fragments[1], "<strong>");
+    
+    free_fragments(&fragments);
+}
+
+int main() {
+    CU_initialize_registry();
+    CU_pSuite suite = CU_add_suite("msg_split_test_suite", 0, 0);
+
+    CU_add_test(suite, "test_split_html", test_split_html);
+
+    CU_basic_set_mode(CU_BRM_VERBOSE);
+    CU_basic_run_tests();
+    CU_cleanup_registry();
+
+    return 0;
+}
