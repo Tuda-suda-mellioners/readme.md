@@ -1,0 +1,15 @@
+№1
+cmake_minimum_required(VERSION 3.10)
+
+project(html_splitter)
+
+add_subdirectory(tests)
+
+add_executable(split_msg split_msg.c msg_split.c)
+target_link_libraries(split_msg)
+
+
+
+№2
+add_executable(test_msg_split test_msg_split.c ../msg_split.c)
+target_link_libraries(test_msg_split CUnit)
